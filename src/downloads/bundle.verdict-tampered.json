@@ -41,7 +41,7 @@
       "statement": "ACTION_ABSENT",
       "subject": {
         "order_id": "ORD-1042",
-        "amount_cents": 640,
+        "amount_cents": 6400,
         "currency": "USD"
       },
       "observed_at": "2026-08-30T03:55:01.000Z",
@@ -56,14 +56,14 @@
     }
   ],
   "comparison": {
-    "verdict": "DISAGREEMENT",
+    "verdict": "AGREEMENT",
     "diff": [
       {
         "field": "statement",
         "basis": "declared_correspondence",
         "site_value": "SUCCESS_DECLARED",
         "destination_value": "ACTION_ABSENT",
-        "match": false
+        "match": true
       },
       {
         "field": "order_id",

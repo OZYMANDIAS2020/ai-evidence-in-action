@@ -7,6 +7,13 @@ const PUBLIC_KEYS = {
   "destination-demo-2026": "MCowBQYDK2VwAyEAUG8cNiPTPddXq6gOOfCcQQ8dZjRbniLZmtDVU+5BNyY="
 };
 
+// The same declared correspondence relation the page uses. It is duplicated here
+// on purpose: this script must reach its verdict without contacting the site.
+const STATEMENT_CORRESPONDENCE = {
+  SUCCESS_DECLARED: { ACTION_PRESENT: true, ACTION_ABSENT: false }
+};
+const SUBJECT_FIELDS = ["order_id", "amount_cents", "currency"];
+
 function canonicalize(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
@@ -19,11 +26,16 @@ function payloadForRecord(record) {
 }
 
 function compareRecords(site, destination) {
-  if (!site || !destination) return { verdict: "INSUFFICIENT_EVIDENCE", diff: [] };
-  const fields = ["order_id", "amount_cents", "currency"];
-  const diff = fields.map((field) => ({ field, site_value: site.subject?.[field], destination_value: destination.subject?.[field], match: site.subject?.[field] === destination.subject?.[field] }));
-  const actionPresent = destination.statement === "ACTION_PRESENT";
-  return { verdict: actionPresent && diff.every((row) => row.match) ? "AGREEMENT" : "DISAGREEMENT", diff };
+  if (!site || !destination) {
+    return { verdict: "INSUFFICIENT_EVIDENCE", missing: [!site ? "site" : null, !destination ? "destination" : null].filter(Boolean), diff: [] };
+  }
+  const correspondence = STATEMENT_CORRESPONDENCE[site.statement]?.[destination.statement];
+  const diff = [
+    { field: "statement", basis: "declared_correspondence", site_value: site.statement, destination_value: destination.statement, match: correspondence === true },
+    ...SUBJECT_FIELDS.map((field) => ({ field, basis: "identity", site_value: site.subject?.[field], destination_value: destination.subject?.[field], match: site.subject?.[field] === destination.subject?.[field] }))
+  ];
+  if (correspondence === undefined) return { verdict: "INSUFFICIENT_EVIDENCE", diff, reason: "STATEMENT_NOT_COMPARABLE" };
+  return { verdict: diff.every((row) => row.match) ? "AGREEMENT" : "DISAGREEMENT", diff };
 }
 
 function verifyRecord(record) {
@@ -33,7 +45,12 @@ function verifyRecord(record) {
   const digest = createHash("sha256").update(canonicalize(payloadForRecord(record))).digest();
   const hashValid = digest.toString("hex") === record.integrity.payload_sha256;
   const publicKey = createPublicKey({ key: Buffer.from(publicKeyB64, "base64"), format: "der", type: "spki" });
-  const signatureValid = hashValid && verify(null, digest, publicKey, Buffer.from(record.integrity.sig_ed25519, "base64"));
+  let signatureValid = false;
+  try {
+    signatureValid = hashValid && verify(null, digest, publicKey, Buffer.from(record.integrity.sig_ed25519 || "", "base64"));
+  } catch {
+    signatureValid = false;
+  }
   return { record_id: record.record_id, hash_valid: hashValid, signature_valid: signatureValid, status: signatureValid ? "SIGNATURE_VALID" : "SIGNATURE_INVALID", key_id: record.integrity.key_id };
 }
 
@@ -45,17 +62,32 @@ function main() {
   if (!bundle || !Array.isArray(bundle.records)) { console.error("Malformed bundle: records array is required."); process.exit(3); }
 
   const checks = bundle.records.map(verifyRecord);
-  const site = bundle.records.find((record) => record.record_type === "site_claim");
-  const destination = bundle.records.find((record) => record.record_type === "destination_report");
+  // Only records that actually verified are allowed to feed the recomputation.
+  const isVerified = (index) => checks[index].hash_valid && checks[index].signature_valid;
+  const verified = bundle.records.filter((_, index) => isVerified(index));
+  const excluded = bundle.records.filter((_, index) => !isVerified(index)).map((record) => record?.record_id || "unknown");
+  const site = verified.find((record) => record.record_type === "site_claim") || null;
+  const destination = verified.find((record) => record.record_type === "destination_report") || null;
   const recomputed = compareRecords(site, destination);
-  const verdictMatches = recomputed.verdict === bundle.comparison?.verdict;
+  const recordedVerdict = bundle.comparison?.verdict ?? null;
+  const verdictMatches = recordedVerdict !== null && recomputed.verdict === recordedVerdict;
   const signaturesValid = checks.length > 0 && checks.every((check) => check.signature_valid && check.hash_valid);
+  const bundleStatus = !signaturesValid ? "SIGNATURE_INVALID" : verdictMatches ? "VERIFIED" : "COMPARISON_ALTERED";
 
-  console.log(JSON.stringify({ checks, recomputed_verdict: recomputed.verdict, recorded_verdict: bundle.comparison?.verdict || null, verdict_matches: verdictMatches }, null, 2));
+  console.log(JSON.stringify({
+    checks,
+    comparison_source: "recomputed_from_verified_records",
+    excluded_unverified_records: excluded,
+    recomputed_comparison: recomputed,
+    recorded_verdict: recordedVerdict,
+    verdict_matches: verdictMatches,
+    bundle_status: bundleStatus
+  }, null, 2));
   console.log();
   console.log(`VERIFIED: each record's canonical hash matches payload_sha256: ${checks.every((c) => c.hash_valid) ? "YES" : "NO"}`);
   console.log(`VERIFIED: each signature is valid for its published demo key: ${signaturesValid ? "YES" : "NO"}`);
   console.log(`VERIFIED: recomputed comparison verdict matches the bundle: ${verdictMatches ? "YES" : "NO"}`);
+  console.log(`BUNDLE STATUS: ${bundleStatus}`);
   console.log("NOT VERIFIED: that any real-world event occurred");
   console.log("NOT VERIFIED: that the demo sources are organizationally independent");
   console.log("NOT VERIFIED: wall-clock accuracy or real-world identity");
