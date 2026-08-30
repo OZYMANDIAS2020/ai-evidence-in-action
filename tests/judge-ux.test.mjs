@@ -163,3 +163,106 @@ test("narrow viewport rules still avoid overflow and keep the status on one line
   assert.match(narrow, /\.status\{max-width:none;text-align:right;white-space:nowrap/);
   assert.match(narrow, /\.actions>\*,button,\.button-link\{width:100%\}/);
 });
+
+// ------------------------------------------- J. first-time human onboarding
+/**
+ * Founder review and several cold first-time reviews found the same thing: the
+ * workflow worked, but nothing on the page told a first-time reader what to do.
+ * These pin the onboarding that answers that, and the two wording rules it must
+ * not break — no tool is renamed, and VERIFIED is never presented as truth.
+ */
+const indexHtml = fs.readFileSync("src/index.html", "utf8");
+const appSource = fs.readFileSync("src/app.js", "utf8");
+const EVIDENCE_BUTTONS = ["copy-bundle", "download-bundle", "verify-bundle", "tamper-demo"];
+const NO_EVIDENCE_MESSAGE = 'No evidence bundle yet. Run the demo first.';
+
+test("every control that acts on evidence refuses the same way before there is any", () => {
+  for (const id of EVIDENCE_BUTTONS) {
+    const handler = appSource.slice(appSource.indexOf(`$("${id}").addEventListener`));
+    assert.ok(handler, `no handler for #${id}`);
+    const guard = handler.slice(0, 260);
+    assert.match(guard, /if \(!store\.state\.site\)/, `#${id} acts on evidence that may not exist`);
+    assert.ok(guard.includes(NO_EVIDENCE_MESSAGE), `#${id} does not give the shared bounded message`);
+  }
+  // One message, not four near-identical ones a reader has to reconcile.
+  assert.equal(appSource.split(NO_EVIDENCE_MESSAGE).length - 1, EVIDENCE_BUTTONS.length);
+});
+
+test("the how-to block states the four human steps and how to start over", () => {
+  const howto = indexHtml.slice(indexHtml.indexOf('class="howto"'), indexHtml.indexOf("</section>", indexHtml.indexOf('class="howto"')));
+  assert.ok(howto.length > 0, "the page has no how-to block");
+  assert.match(howto, /How to use/);
+  const steps = [...howto.matchAll(/<li>([^<]+)<\/li>/g)].map((match) => match[1]);
+  assert.equal(steps.length, 4, `expected four steps, found ${steps.length}`);
+  assert.match(steps[0], /[Cc]hoose a scenario/);
+  assert.match(steps[1], /[Rr]un the demo agent/);
+  assert.match(steps[2], /[Cc]ompare/);
+  assert.match(steps[3], /[Vv]erify|tamper/);
+  assert.match(howto, /Reset demo starts over/);
+  // It sits before the controls it describes, so it is read first.
+  assert.ok(indexHtml.indexOf('class="howto"') < indexHtml.indexOf('class="scenarios"'));
+  assert.ok(indexHtml.indexOf('class="howto"') < indexHtml.indexOf('id="run-demo"'));
+});
+
+test("the how-to block tells an agent the same workflow, in call order", () => {
+  const howto = indexHtml.slice(indexHtml.indexOf('class="howto"'), indexHtml.indexOf("</section>", indexHtml.indexOf('class="howto"')));
+  const order = ["request_refund", "get_evidence", "compare_evidence", "verify_evidence"];
+  let cursor = -1;
+  for (const tool of order) {
+    const at = howto.indexOf(tool, cursor + 1);
+    assert.ok(at > cursor, `${tool} is missing or out of call order in the how-to block`);
+    cursor = at;
+  }
+  assert.match(howto, /WebMCP agents can call/);
+  assert.match(howto, /the same board updates for the human/);
+});
+
+test("the primary button names the demo, and no WebMCP tool was renamed", () => {
+  assert.match(indexHtml, /<button id="run-demo">Run demo agent<\/button>/);
+  assert.equal(indexHtml.includes("Run scripted agent"), false, "the old label survives somewhere");
+  assert.match(indexHtml, /<button id="reset-demo" class="secondary">Reset demo<\/button>/);
+  // The visible label changed; the registered tool names did not.
+  const tools = fs.readFileSync("src/webmcp-tools.js", "utf8");
+  for (const tool of ["request_refund", "get_evidence", "compare_evidence", "verify_evidence"]) {
+    assert.match(tools, new RegExp(`name: "${tool}"`), `${tool} was renamed`);
+  }
+});
+
+test("the empty timeline says what to do, before the first run and after Reset", () => {
+  const empty = "No steps yet. Run the demo agent to see the WebMCP tool calls.";
+  // Present in the served markup, so it is right before any script has run.
+  assert.match(indexHtml, /<ol id="timeline" class="timeline"><li class="timeline-empty">/);
+  assert.ok(indexHtml.includes(empty), "the served markup has no timeline empty state");
+  // And restored by the same function Reset calls, so it comes back afterwards.
+  assert.ok(appSource.includes(empty), "the empty state cannot be re-rendered");
+  const render = appSource.slice(appSource.indexOf("function renderTimeline()"), appSource.indexOf("function listItems"));
+  assert.match(render, /timeline\.length === 0/, "renderTimeline has no empty branch");
+  assert.match(render, /timeline-empty/);
+  assert.match(appSource, /\$\("reset-demo"\)\.addEventListener[\s\S]{0,120}renderTimeline\(\)/);
+});
+
+test("the page separates what the sources reported from what verification checked", () => {
+  const comparisonCard = indexHtml.slice(indexHtml.indexOf('class="card comparison-card"'), indexHtml.indexOf("</section>", indexHtml.indexOf('class="card comparison-card"')));
+  assert.match(comparisonCard, /AGREEMENT and DISAGREEMENT describe what the two demo sources reported/);
+  assert.match(comparisonCard, /not a verification result/);
+
+  const verifyPanel = indexHtml.slice(indexHtml.indexOf('id="verification-status"'));
+  assert.match(verifyPanel, /VERIFIED describes whether the evidence passed the integrity, pairing, and comparison checks/);
+  assert.match(verifyPanel, /does not mean a real refund happened/);
+  // Neither sentence may promote VERIFIED into a claim about the world.
+  for (const sentence of [comparisonCard, verifyPanel.slice(0, 600)]) {
+    assert.equal(/VERIFIED means (the |a )?(refund|truth|money)/i.test(sentence), false, "VERIFIED is presented as truth");
+  }
+});
+
+test("onboarding added prose only: no new dependency, dialog, or timed behaviour", () => {
+  assert.match(fs.readFileSync("package.json", "utf8"), /"private": true/);
+  const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+  assert.equal(pkg.dependencies, undefined);
+  assert.equal(pkg.devDependencies, undefined);
+  for (const token of ["<dialog", "showModal", "setTimeout", "setInterval", "requestAnimationFrame", "scrollIntoView", "<select"]) {
+    assert.equal(indexHtml.includes(token), false, `the page gained ${token}`);
+    assert.equal(appSource.includes(token), false, `app.js gained ${token}`);
+  }
+  assert.equal(/@keyframes|transition:|animation:/.test(fs.readFileSync("src/styles.css", "utf8")), false, "the page gained animation");
+});

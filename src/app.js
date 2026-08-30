@@ -6,7 +6,15 @@ import { runTamperDemo } from "./tamper-demo.js";
 const $ = (id) => document.getElementById(id);
 const timeline = [];
 function log(kind, tool, result) { timeline.push({ at: new Date().toLocaleTimeString(), kind, tool, result }); renderTimeline(); }
-function renderTimeline() { $("timeline").replaceChildren(...timeline.map((row) => { const li = document.createElement("li"); li.textContent = `${row.at} · ${row.kind} · ${row.tool} · ${row.result}`; return li; })); }
+// The empty timeline is a state a reader can be in twice: before the first run,
+// and after Reset. Both go through here, so the empty state is rendered by the
+// same function that clears the list rather than being static markup that the
+// first render would silently drop.
+const TIMELINE_EMPTY = "No steps yet. Run the demo agent to see the WebMCP tool calls.";
+function renderTimeline() {
+  if (timeline.length === 0) { const li = document.createElement("li"); li.className = "timeline-empty"; li.textContent = TIMELINE_EMPTY; $("timeline").replaceChildren(li); return; }
+  $("timeline").replaceChildren(...timeline.map((row) => { const li = document.createElement("li"); li.textContent = `${row.at} · ${row.kind} · ${row.tool} · ${row.result}`; return li; }));
+}
 function listItems(id, values) { $(id).replaceChildren(...values.map((value) => { const li = document.createElement("li"); li.textContent = value; return li; })); }
 
 function selectedScenario() {
@@ -56,7 +64,7 @@ function render(state) {
   $("verification-status").textContent = view.verificationStatus;
 }
 
-const store = createStore(render, log); render(store.state);
+const store = createStore(render, log); render(store.state); renderTimeline();
 
 /**
  * The only adaptation between this page and the browser's WebMCP runtime, and
@@ -109,9 +117,12 @@ $("reset-demo").addEventListener("click", () => { timeline.length = 0; renderTim
 for (const radio of document.querySelectorAll('input[name="scenario"]')) {
   radio.addEventListener("change", () => { timeline.length = 0; renderTimeline(); store.reset(); $("bundle-output").textContent = ""; });
 }
-// The bundle is shown whether or not the clipboard write is permitted: a denied
-// clipboard must not leave a stale verification result on screen.
-$("copy-bundle").addEventListener("click", async () => { const serialized = JSON.stringify(makeBundle(store.state.site, store.state.destination, store.state.comparison), null, 2); $("bundle-output").textContent = serialized; try { if (navigator.clipboard) await navigator.clipboard.writeText(serialized); } catch (error) { log("ERROR", "copy-bundle", error?.message || String(error)); } });
+// Same precondition as Download, Verify and Test tamper detection: with no
+// evidence yet there is nothing to copy, and an empty-records bundle must not
+// leave the clipboard looking like evidence. Past that guard the bundle is
+// shown whether or not the clipboard write is permitted: a denied clipboard
+// must not leave a stale verification result on screen.
+$("copy-bundle").addEventListener("click", async () => { if (!store.state.site) { $("bundle-output").textContent = "No evidence bundle yet. Run the demo first."; return; } const serialized = JSON.stringify(makeBundle(store.state.site, store.state.destination, store.state.comparison), null, 2); $("bundle-output").textContent = serialized; try { if (navigator.clipboard) await navigator.clipboard.writeText(serialized); } catch (error) { log("ERROR", "copy-bundle", error?.message || String(error)); } });
 $("download-bundle").addEventListener("click", () => { if (!store.state.site) { $("bundle-output").textContent = "No evidence bundle yet. Run the demo first."; return; } const serialized = JSON.stringify(makeBundle(store.state.site, store.state.destination, store.state.comparison), null, 2); const url = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = "ai-evidence-in-action-bundle.json"; link.click(); URL.revokeObjectURL(url); });
 $("verify-bundle").addEventListener("click", async () => { if (!store.state.site) { $("bundle-output").textContent = "No evidence bundle yet. Run the demo first."; return; } const result = await store.verify({ claim_id: store.state.site.claim_id }); $("bundle-output").textContent = JSON.stringify(result, null, 2); });
 // Operates on a throwaway copy: page state and the agent's evidence are untouched.
