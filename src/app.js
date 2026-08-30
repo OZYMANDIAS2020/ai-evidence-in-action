@@ -40,16 +40,23 @@ function render(state) {
 const store = createStore(render, log); render(store.state);
 
 /**
- * The only adaptation between this page and the browser's WebMCP runtime. A
- * runtime that hands back a JSON string rather than a structured value is
- * normalised here so nothing downstream has to know which it received.
+ * The only adaptation between this page and the browser's WebMCP runtime, and
+ * the only place that knows how this runtime moves values across the boundary.
+ *
+ * Measured against Chrome 152.0.7977.64 (document.modelContext, flag
+ * enable-webmcp-testing), not read off the specification:
+ *   - executeTool takes the RegisteredTool from getTools plus its arguments as
+ *     a JSON string; passing a plain object fails with "Failed to parse input
+ *     arguments".
+ *   - results come back as a JSON string.
+ * Both are normalised here so nothing downstream has to know either fact.
  */
 async function executeRegisteredTool(name, input) {
   if (!document.modelContext?.getTools || !document.modelContext?.executeTool) return null;
   const tools = await document.modelContext.getTools();
   const tool = tools.find((candidate) => candidate.name === name);
   if (!tool) throw new Error(`Registered tool ${name} was not discovered.`);
-  const raw = await document.modelContext.executeTool(tool, input);
+  const raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
   if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return { ok: false, error: { code: "TOOL_RESULT_UNPARSEABLE", message: raw } }; } }
   return raw;
 }

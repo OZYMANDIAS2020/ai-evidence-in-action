@@ -42,7 +42,10 @@ export async function registerWebMcpTools(store, log) {
       required: ["order_id", "amount_cents", "request_id"],
       additionalProperties: false
     },
-    execute: async (input, { signal }) => store.requestRefund(input, signal)
+    // Measured against Chrome 152.0.7977.64: the runtime invokes execute with
+    // exactly one argument, so a second parameter must never be destructured.
+    // Cancellation still works wherever a runtime does supply an options bag.
+    execute: async (input, options) => store.requestRefund(input, options?.signal)
   });
 
   await register({

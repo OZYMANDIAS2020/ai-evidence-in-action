@@ -63,3 +63,25 @@ test("the runtime adaptation is confined to one place and fails closed", () => {
   assert.equal(occurrences, 1, "result normalisation should live in exactly one boundary");
   assert.match(app, /TOOL_RESULT_UNPARSEABLE/);
 });
+
+/**
+ * The two regressions below were found only by running against a native
+ * runtime (Chrome 152.0.7977.64). Both failed silently in every non-native
+ * path, so they are pinned here as source-level guards.
+ */
+test("no tool destructures a second execute argument the runtime does not pass", () => {
+  // Chrome 152 invokes execute with exactly one argument; destructuring a
+  // second parameter throws before the tool body runs.
+  const executeSignatures = [...source.matchAll(/execute: async \(([^)]*)\)/g)].map((match) => match[1]);
+  assert.equal(executeSignatures.length, 4);
+  for (const signature of executeSignatures) {
+    assert.equal(signature.includes("{"), false, `execute destructures its arguments: (${signature})`);
+  }
+  assert.match(source, /execute: async \(input, options\) => store\.requestRefund\(input, options\?\.signal\)/);
+});
+
+test("tool arguments cross the boundary as a JSON string", () => {
+  // Chrome 152 rejects a plain object with "Failed to parse input arguments".
+  assert.match(app, /executeTool\(tool, JSON\.stringify\(input\)\)/);
+  assert.equal(/executeTool\(tool, input\)/.test(app), false, "arguments are passed unserialised");
+});
