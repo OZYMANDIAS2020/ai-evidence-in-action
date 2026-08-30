@@ -1,6 +1,7 @@
 import { createStore, registerWebMcpTools } from "./webmcp-tools.js";
 import { DEFAULT_SCENARIO, makeBundle, SCENARIOS } from "./evidence.js";
 import { buildViewModel } from "./view-model.js";
+import { runTamperDemo } from "./tamper-demo.js";
 
 const $ = (id) => document.getElementById(id);
 const timeline = [];
@@ -113,4 +114,11 @@ for (const radio of document.querySelectorAll('input[name="scenario"]')) {
 $("copy-bundle").addEventListener("click", async () => { const serialized = JSON.stringify(makeBundle(store.state.site, store.state.destination, store.state.comparison), null, 2); $("bundle-output").textContent = serialized; try { if (navigator.clipboard) await navigator.clipboard.writeText(serialized); } catch (error) { log("ERROR", "copy-bundle", error?.message || String(error)); } });
 $("download-bundle").addEventListener("click", () => { if (!store.state.site) { $("bundle-output").textContent = "No evidence bundle yet. Run the demo first."; return; } const serialized = JSON.stringify(makeBundle(store.state.site, store.state.destination, store.state.comparison), null, 2); const url = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); const link = document.createElement("a"); link.href = url; link.download = "ai-evidence-in-action-bundle.json"; link.click(); URL.revokeObjectURL(url); });
 $("verify-bundle").addEventListener("click", async () => { if (!store.state.site) { $("bundle-output").textContent = "No evidence bundle yet. Run the demo first."; return; } const result = await store.verify({ claim_id: store.state.site.claim_id }); $("bundle-output").textContent = JSON.stringify(result, null, 2); });
+// Operates on a throwaway copy: page state and the agent's evidence are untouched.
+$("tamper-demo").addEventListener("click", async () => {
+  if (!store.state.site) { $("bundle-output").textContent = "No evidence bundle yet. Run the demo first."; return; }
+  const report = await runTamperDemo(makeBundle(store.state.site, store.state.destination, store.state.comparison));
+  log("LOCAL", "tamper-test", report.ok ? `${report.what_was_edited.path} → ${report.edited_copy.bundle_status}` : report.error.code);
+  $("bundle-output").textContent = JSON.stringify(report, null, 2);
+});
 try { const registration = await registerWebMcpTools(store, log); if (registration.supported) $("agent-status").textContent = "Agent surface: ready"; else { $("agent-status").textContent = "Agent surface: unavailable"; $("unsupported").hidden = false; } } catch (error) { $("agent-status").textContent = "Agent surface: registration error"; $("unsupported").hidden = false; log("ERROR", "registration", error?.message || String(error)); }
