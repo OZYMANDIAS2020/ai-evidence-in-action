@@ -18,3 +18,6 @@ jobs:
         shell: bash
         run: |
           ! grep -RniE --exclude-dir=.git --exclude='*.lock' '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|password\s*=|api[_-]?key\s*=|secret\s*=)' .
+      - name: Live production smoke test
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node tests/live-smoke.mjs
