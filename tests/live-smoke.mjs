@@ -40,6 +40,9 @@ for (let attempt = 1; attempt <= 24; attempt += 1) {
     const page = await fetch(`${base}/`, { cache: "no-store" });
     const html = await page.text();
     if (!page.ok || !html.includes("AI Evidence in Action") || !html.includes("Verify signatures")) throw new Error("production page is not the signed-evidence build yet");
+    if (page.headers.get("x-content-type-options") !== "nosniff") throw new Error("missing nosniff security header");
+    if (page.headers.get("x-frame-options") !== "DENY") throw new Error("missing DENY framing policy");
+    if (!page.headers.get("content-security-policy")?.includes("default-src 'self'")) throw new Error("missing restrictive content security policy");
     const id = `${Date.now()}-${attempt}`;
     const site = await fetchRecord("site", `clm_ci_${id}`, `req_ci_${id}`);
     const destination = await fetchRecord("destination", site.claim_id, site.request_id);
