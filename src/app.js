@@ -13,6 +13,20 @@ function selectedScenario() {
   return SCENARIOS.includes(checked?.value) ? checked.value : DEFAULT_SCENARIO;
 }
 
+/**
+ * The four comparison columns, in order. Each cell carries its column name on
+ * data-label so a narrow viewport can show the label with the value instead of
+ * relying on column position. The labels are structural — they name the column,
+ * never the evidence — and the static table header above the rows uses the same
+ * four names.
+ */
+const DIFF_COLUMNS = [
+  { label: "FIELD", value: (row) => String(row.field) },
+  { label: "SITE", value: (row) => String(row.site_value) },
+  { label: "DESTINATION", value: (row) => String(row.destination_value) },
+  { label: "MATCH", value: (row) => String(row.match) }
+];
+
 function render(state) {
   const view = buildViewModel(state);
   $("site-status").textContent = view.site.status;
@@ -28,8 +42,12 @@ function render(state) {
   $("diff").replaceChildren(...view.comparison.diff.map((row) => {
     const div = document.createElement("div");
     div.className = `diff-row ${row.match ? "row-match" : "row-mismatch"}`;
-    const cells = [row.field, String(row.site_value), String(row.destination_value), row.match ? "MATCH true" : "MATCH false"];
-    for (const value of cells) { const span = document.createElement("span"); span.textContent = value; div.append(span); }
+    for (const column of DIFF_COLUMNS) {
+      const span = document.createElement("span");
+      span.dataset.label = column.label;
+      span.textContent = column.value(row);
+      div.append(span);
+    }
     return div;
   }));
   listItems("established", view.established);
