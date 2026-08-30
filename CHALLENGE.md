@@ -17,7 +17,7 @@ Current public build includes:
 - an offline verifier with a clean signed fixture and a deliberate one-field tamper fixture
 - a shared human/agent evidence board
 - explicit limitations and unsupported-browser behavior
-- automated tests for the comparison semantics, WebMCP surface, and offline verifier
+- automated tests for the comparison semantics, WebMCP surface, offline verifier, and live production signed records
 
 ## Publication boundary
 
@@ -25,4 +25,4 @@ This repository is intentionally standalone. It contains no private production s
 
 ## Status
 
-Build in progress. The signed demonstration evidence and offline verifier are implemented and locally falsified against the tampered fixture. Production WebMCP browser testing, full P0 attack validation, final video, and final challenge submission remain to be completed and will not be claimed complete until measured.
+Build in progress. The signed demonstration evidence and offline verifier are implemented and falsified against the tampered fixture. Production signing configuration is now isolated to Netlify's function environment and is not stored in this repository. Live production smoke testing is automated in CI. Full WebMCP browser testing, the remaining P0 attack validation, final video, and final challenge submission remain to be completed and will not be claimed complete until measured.
