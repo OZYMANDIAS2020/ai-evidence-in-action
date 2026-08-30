@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="AI Evidence in Action — a WebMCP demonstration for comparing a site-reported AI action with a second simulated source." />
   <title>AI Evidence in Action</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -22,6 +23,7 @@
       </fieldset>
       <p class="small">The selected fixture is a named server-side scenario. It chooses which synthetic situation the demo replays; it cannot set what any record says. Every statement is decided and signed on the server.</p>
       <div class="actions"><button id="run-demo">Run scripted agent</button><button id="reset-demo" class="secondary">Reset demo</button></div>
+      <p class="small">This button walks the same four WebMCP tools an AI agent would call: <code>request_refund</code>, <code>get_evidence</code>, <code>compare_evidence</code>, <code>verify_evidence</code>. In a browser that supports WebMCP an agent drives them directly, and the board below updates as it goes.</p>
       <p id="unsupported" class="notice" hidden>This browser does not currently expose <code>document.modelContext</code>. The same synthetic demonstration remains usable with the page button; WebMCP registration activates automatically in a supported browser.</p>
     </section>
     <section class="board" aria-label="Evidence board">
@@ -31,7 +33,8 @@
     </section>
     <section class="panel"><h2>Tool-call timeline</h2><ol id="timeline" class="timeline"></ol></section>
     <section class="split"><article class="panel"><h2>What can be established</h2><ul id="established"><li>No claim has been recorded yet.</li></ul></article><article class="panel"><h2>What cannot be established</h2><ul id="not-established"><li>Whether any real-world financial event occurred.</li></ul></article></section>
-    <section class="panel"><h2>Verify it yourself</h2><p>Verification recomputes the SHA-256 commitment, checks each Ed25519 signature against the published demo public keys, then recomputes the comparison from the records that verified and checks it against the verdict recorded in the bundle. Editing the verdict alone is detected even though every signature still passes. It verifies demo-record integrity, key attribution, and comparison consistency only—not that a real-world refund occurred.</p><p class="verification-line">Current verification: <strong id="verification-status">NOT VERIFIED YET</strong></p><div class="actions"><button id="copy-bundle" class="secondary">Copy evidence bundle</button><button id="download-bundle" class="secondary">Download evidence bundle</button><button id="verify-bundle" class="secondary">Verify signatures</button><a class="button-link secondary" href="/downloads/verify.mjs" download>Download offline verifier</a></div><p class="small">Offline use: <code>node verify.mjs ai-evidence-in-action-bundle.json</code>. The verifier uses the public demo keys embedded in the script and does not contact this site.</p><pre id="bundle-output" class="code"></pre></section>
+    <section class="panel"><h2>Verify it yourself</h2><p>Verification recomputes the SHA-256 commitment, checks each Ed25519 signature against the published demo public keys, then recomputes the comparison from the records that verified and checks it against the verdict recorded in the bundle. Editing the verdict alone is detected even though every signature still passes. It verifies demo-record integrity, key attribution, and comparison consistency only—not that a real-world refund occurred.</p><p class="verification-line">Current verification: <strong id="verification-status">NOT VERIFIED YET</strong></p><div class="actions"><button id="copy-bundle" class="secondary">Copy evidence bundle</button><button id="download-bundle" class="secondary">Download evidence bundle</button><button id="verify-bundle" class="secondary">Verify signatures</button><button id="tamper-demo" class="secondary">Test tamper detection</button><a class="button-link secondary" href="/downloads/verify.mjs" download>Download offline verifier</a></div>
+      <p class="small">Test tamper detection edits a throwaway copy of the current evidence, changing one value in the recorded comparison and nothing inside the signed records, then runs that copy through the same verifier this page uses. Your own evidence is left untouched.</p><p class="small">Offline use: <code>node verify.mjs ai-evidence-in-action-bundle.json</code>. The verifier uses the public demo keys embedded in the script and does not contact this site.</p><pre id="bundle-output" class="code"></pre></section>
   </main>
   <footer>Both demo sources are simulated in this same deployment and are operated by the same demonstration operator. They use distinct demo signing keys, but they are not organizationally independent and neither is presented as a real financial institution.</footer>
   <script type="module" src="/app.js"></script>

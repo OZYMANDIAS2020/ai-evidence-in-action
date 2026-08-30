@@ -4,6 +4,6 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check src/app.js && node --check src/evidence.js && node --check src/view-model.js && node --check src/webmcp-tools.js && node --check netlify/functions/demo-record.mjs && node --check src/downloads/verify.mjs && node --check tests/live-smoke.mjs"
+    "check": "node --check src/app.js && node --check src/evidence.js && node --check src/view-model.js && node --check src/tamper-demo.js && node --check src/webmcp-tools.js && node --check netlify/functions/demo-record.mjs && node --check src/downloads/verify.mjs && node --check tests/live-smoke.mjs"
   }
 }
