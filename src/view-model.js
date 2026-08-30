@@ -62,8 +62,10 @@ export function buildViewModel(state) {
   if (verdict === "DISAGREEMENT") established.push("The two held records conflict on at least one compared field.");
   if (verdict === "AGREEMENT") established.push("The two held records agree on every compared field.");
   if (state.verification?.overall === "SIGNATURE_VALID") established.push("The current signed records pass hash and Ed25519 signature verification against the published demo keys.");
-  if (state.verification?.verdict_matches === true) established.push("The recorded verdict matches the verdict recomputed from the verified records.");
-  if (state.verification?.verdict_matches === false) established.push("The recorded verdict does NOT match the verdict recomputed from the verified records.");
+  if (state.verification?.claim_pair_bound === false) established.push(`The two records are not evidence about the same request, so they were not compared (${state.verification.mismatched_pairing_fields.join(", ")} differ).`);
+  if (state.verification?.comparison_matches === true) established.push("The whole recorded comparison reproduces from the verified records.");
+  if (state.verification?.comparison_matches === false) established.push("The recorded comparison does NOT reproduce from the verified records.");
+  if (state.verification?.statement_correspondence_matches === false) established.push("The correspondence table published in the bundle is not the one this page applied.");
 
   return {
     site: {

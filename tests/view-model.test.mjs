@@ -58,10 +58,24 @@ test("the established list is derived from the records actually held", () => {
   assert.ok(view.established.some((line) => /agree on every compared field/.test(line)));
 });
 
-test("a failed verdict recomputation is stated in the established list", () => {
-  const view = buildViewModel(stateFor(destinationWith("ACTION_ABSENT"), { verification: { overall: "SIGNATURE_VALID", verdict_matches: false, bundle_status: "COMPARISON_ALTERED" } }));
-  assert.ok(view.established.some((line) => line.includes("does NOT match")));
+test("a failed comparison recomputation is stated in the established list", () => {
+  const view = buildViewModel(stateFor(destinationWith("ACTION_ABSENT"), { verification: { overall: "SIGNATURE_VALID", comparison_matches: false, bundle_status: "COMPARISON_ALTERED" } }));
+  assert.ok(view.established.some((line) => line.includes("does NOT reproduce")));
   assert.equal(view.verificationStatus, "COMPARISON_ALTERED");
+});
+
+test("an unbound record pair is stated, and no comparison claim is made for it", () => {
+  const view = buildViewModel(stateFor(destinationWith("ACTION_ABSENT"), {
+    verification: { overall: "SIGNATURE_VALID", claim_pair_bound: false, mismatched_pairing_fields: ["claim_id", "request_id"], bundle_status: "CLAIM_PAIR_MISMATCH" }
+  }));
+  assert.ok(view.established.some((line) => line.includes("not evidence about the same request")));
+  assert.ok(view.established.some((line) => line.includes("claim_id, request_id")));
+  assert.equal(view.verificationStatus, "CLAIM_PAIR_MISMATCH");
+});
+
+test("an altered correspondence table is stated", () => {
+  const view = buildViewModel(stateFor(destinationWith("ACTION_ABSENT"), { verification: { overall: "SIGNATURE_VALID", comparison_matches: true, statement_correspondence_matches: false, bundle_status: "COMPARISON_ALTERED" } }));
+  assert.ok(view.established.some((line) => line.includes("correspondence table published in the bundle is not the one this page applied")));
 });
 
 test("the comparison view exposes the statement conflict for rendering", () => {

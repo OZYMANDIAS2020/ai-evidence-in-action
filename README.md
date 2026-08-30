@@ -62,10 +62,15 @@ The comparison emits no score, no probability, and no opinion about which source
 node verify.mjs ai-evidence-in-action-bundle.json
 ```
 
-Verification has two independent parts, in the browser and in the offline verifier alike:
+Verification has three independent parts, in the browser and in the offline verifier alike:
 
 - **Integrity** — each record's canonical payload is re-hashed and each Ed25519 signature is checked against the published demo public keys.
-- **Comparison consistency** — the verdict is recomputed from the records that actually verified and checked against the verdict recorded in the bundle. A record that fails verification is excluded from the recomputation, so swapping a statement cannot buy a better verdict.
+- **Pairing** — the two records must be evidence about the same request. `claim_id`, `request_id` and `scenario` are all inside the signed payload and must agree before a comparison is formed. Two records that were each validly signed but describe different claims are refused with `CLAIM_PAIR_MISMATCH`: valid signatures on two unrelated records are not a valid pair.
+- **Comparison consistency** — the *whole* comparison is recomputed from the records that verified and checked against everything the bundle recorded: the verdict, every diff row's field, basis, values and match, any `reason` or `missing` list, and the published correspondence table. A record that fails verification is excluded from the recomputation, so swapping a statement cannot buy a better verdict.
+
+The recorded comparison is a reproducibility claim, never an authority. It is not signed — signing it would make it self-certifying instead of independently checkable — so a verifier recomputes it and compares. Both verifiers also report a `comparison_digest` derived from that canonical form; a digest supplied inside a bundle is ignored.
+
+A bundle ends in exactly one status: `VERIFIED`, `SIGNATURE_INVALID`, `CLAIM_PAIR_MISMATCH`, or `COMPARISON_ALTERED`.
 
 Two deliberately modified examples are included:
 

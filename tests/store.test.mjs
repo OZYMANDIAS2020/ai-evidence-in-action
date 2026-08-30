@@ -136,7 +136,11 @@ test("destination outage becomes insufficient evidence, never failure", async ()
     const comparison = store.compare({ claim_id: first.claim.claim_id });
     assert.equal(evidence.status, "DESTINATION_UNAVAILABLE");
     assert.equal(comparison.verdict, "INSUFFICIENT_EVIDENCE");
-    assert.equal(comparison.reason, "DESTINATION_UNAVAILABLE");
+    // Reported beside the comparison, never inside it: why the destination is
+    // missing is live session state and cannot be recomputed from a bundle.
+    assert.equal(comparison.destination_unavailable, true);
+    assert.equal(store.state.comparison.reason, undefined);
+    assert.deepEqual(store.state.comparison.missing, ["destination"]);
   } finally { globalThis.fetch = originalFetch; }
 });
 

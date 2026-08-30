@@ -16,6 +16,32 @@ export const STATEMENT_CORRESPONDENCE = {
   SUCCESS_DECLARED: { ACTION_PRESENT: true, ACTION_ABSENT: false }
 };
 export const SUBJECT_FIELDS = ["order_id", "amount_cents", "currency"];
+
+/**
+ * Two records may only be compared when they are evidence about the same
+ * request. Every field here is inside the signed payload, so a pair assembled
+ * from records that were each validly signed but describe different claims is
+ * still refused: valid signatures on two unrelated records are not a valid pair.
+ */
+export const PAIRING_FIELDS = ["claim_id", "request_id", "scenario"];
+
+export function pairingMismatches(site, destination) {
+  if (!site || !destination) return [];
+  return PAIRING_FIELDS.filter((field) => canonicalize(site[field] ?? null) !== canonicalize(destination[field] ?? null));
+}
+
+/**
+ * One canonical string for everything a bundle claims about the comparison.
+ * Absent optional fields normalise so a bundle that omits them and one that
+ * spells them out compare equal, while any unexpected key survives into the
+ * string and therefore shows up as a difference. Row order is preserved because
+ * the order is part of the claim.
+ */
+export function canonicalComparison(comparison) {
+  if (!comparison || typeof comparison !== "object" || Array.isArray(comparison)) return null;
+  const { verdict = null, reason = null, missing = [], diff = [], ...rest } = comparison;
+  return canonicalize({ verdict, reason, missing, diff, ...rest });
+}
 export const COMPARED_FIELDS = ["statement", ...SUBJECT_FIELDS];
 export const SCENARIOS = ["disagreement", "agreement", "insufficient_evidence"];
 export const DEFAULT_SCENARIO = "disagreement";
@@ -72,6 +98,10 @@ export function compareRecords(site, destination) {
       diff: []
     };
   }
+  const mismatched = pairingMismatches(site, destination);
+  if (mismatched.length > 0) {
+    return { verdict: "INSUFFICIENT_EVIDENCE", reason: "CLAIM_PAIR_MISMATCH", mismatched_pairing_fields: mismatched, diff: [] };
+  }
   const correspondence = STATEMENT_CORRESPONDENCE[site.statement]?.[destination.statement];
   const diff = [
     { field: "statement", basis: "declared_correspondence", site_value: site.statement, destination_value: destination.statement, match: correspondence === true },
@@ -84,10 +114,11 @@ export function compareRecords(site, destination) {
 }
 
 /**
- * Recomputes the comparison from the records that actually verified, then checks
- * that result against the verdict recorded in the bundle. A bundle whose records
- * are untouched but whose verdict has been edited fails here even though every
- * signature is still valid.
+ * Recomputes the comparison from the records that actually verified and checks
+ * the whole of it against what the bundle recorded, not just the verdict. The
+ * recorded comparison is a reproducibility claim, never an authority: a bundle
+ * whose records are untouched but whose diff rows, correspondence table or
+ * verdict have been edited fails here even though every signature still passes.
  */
 export async function verifyBundle(bundle) {
   const serialized = JSON.stringify(bundle);
@@ -102,10 +133,17 @@ export async function verifyBundle(bundle) {
   const isVerified = (index) => checks[index].hash_valid && checks[index].signature_valid;
   const verified = bundle.records.filter((_, index) => isVerified(index));
   const excluded = bundle.records.filter((_, index) => !isVerified(index)).map((record) => record?.record_id || "unknown");
-  const recomputed = compareRecords(
-    verified.find((record) => record.record_type === "site_claim") || null,
-    verified.find((record) => record.record_type === "destination_report") || null
-  );
+  const verifiedSite = verified.find((record) => record.record_type === "site_claim") || null;
+  const verifiedDestination = verified.find((record) => record.record_type === "destination_report") || null;
+  const mismatchedPairing = pairingMismatches(verifiedSite, verifiedDestination);
+  const recomputed = compareRecords(verifiedSite, verifiedDestination);
+
+  const recordedCanonical = canonicalComparison(bundle.comparison);
+  const recomputedCanonical = canonicalComparison(recomputed);
+  const comparisonMatches = recordedCanonical !== null && recordedCanonical === recomputedCanonical;
+  // The table is published so a reader can reproduce the verdict; a bundle that
+  // ships a different one is claiming a rule this verifier did not apply.
+  const correspondenceMatches = canonicalize(bundle.statement_correspondence ?? null) === canonicalize(STATEMENT_CORRESPONDENCE);
   const recordedVerdict = bundle.comparison?.verdict ?? null;
   const verdictMatches = recordedVerdict !== null && recomputed.verdict === recordedVerdict;
 
@@ -115,10 +153,19 @@ export async function verifyBundle(bundle) {
     overall,
     comparison_source: "recomputed_from_verified_records",
     excluded_unverified_records: excluded,
+    pairing_fields: PAIRING_FIELDS,
+    mismatched_pairing_fields: mismatchedPairing,
+    claim_pair_bound: mismatchedPairing.length === 0,
     recomputed_comparison: recomputed,
+    recomputed_comparison_digest: await sha256Hex(recomputedCanonical),
+    recorded_comparison_digest: recordedCanonical === null ? null : await sha256Hex(recordedCanonical),
     recorded_verdict: recordedVerdict,
     verdict_matches: verdictMatches,
-    bundle_status: !allValid ? "SIGNATURE_INVALID" : verdictMatches ? "VERIFIED" : "COMPARISON_ALTERED"
+    comparison_matches: comparisonMatches,
+    statement_correspondence_matches: correspondenceMatches,
+    bundle_status: !allValid ? "SIGNATURE_INVALID"
+      : mismatchedPairing.length > 0 ? "CLAIM_PAIR_MISMATCH"
+        : comparisonMatches && correspondenceMatches ? "VERIFIED" : "COMPARISON_ALTERED"
   };
 }
 

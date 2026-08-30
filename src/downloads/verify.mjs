@@ -13,6 +13,8 @@ const STATEMENT_CORRESPONDENCE = {
   SUCCESS_DECLARED: { ACTION_PRESENT: true, ACTION_ABSENT: false }
 };
 const SUBJECT_FIELDS = ["order_id", "amount_cents", "currency"];
+// Signed fields that must agree before two records form a comparable pair.
+const PAIRING_FIELDS = ["claim_id", "request_id", "scenario"];
 
 function canonicalize(value) {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -25,9 +27,25 @@ function payloadForRecord(record) {
   return payload;
 }
 
+function pairingMismatches(site, destination) {
+  if (!site || !destination) return [];
+  return PAIRING_FIELDS.filter((field) => canonicalize(site[field] ?? null) !== canonicalize(destination[field] ?? null));
+}
+
+// One canonical string for everything the bundle claims about the comparison.
+function canonicalComparison(comparison) {
+  if (!comparison || typeof comparison !== "object" || Array.isArray(comparison)) return null;
+  const { verdict = null, reason = null, missing = [], diff = [], ...rest } = comparison;
+  return canonicalize({ verdict, reason, missing, diff, ...rest });
+}
+
 function compareRecords(site, destination) {
   if (!site || !destination) {
     return { verdict: "INSUFFICIENT_EVIDENCE", missing: [!site ? "site" : null, !destination ? "destination" : null].filter(Boolean), diff: [] };
+  }
+  const mismatched = pairingMismatches(site, destination);
+  if (mismatched.length > 0) {
+    return { verdict: "INSUFFICIENT_EVIDENCE", reason: "CLAIM_PAIR_MISMATCH", mismatched_pairing_fields: mismatched, diff: [] };
   }
   const correspondence = STATEMENT_CORRESPONDENCE[site.statement]?.[destination.statement];
   const diff = [
@@ -68,30 +86,48 @@ function main() {
   const excluded = bundle.records.filter((_, index) => !isVerified(index)).map((record) => record?.record_id || "unknown");
   const site = verified.find((record) => record.record_type === "site_claim") || null;
   const destination = verified.find((record) => record.record_type === "destination_report") || null;
+  const mismatchedPairing = pairingMismatches(site, destination);
   const recomputed = compareRecords(site, destination);
+  const recordedCanonical = canonicalComparison(bundle.comparison);
+  const recomputedCanonical = canonicalComparison(recomputed);
+  const comparisonMatches = recordedCanonical !== null && recordedCanonical === recomputedCanonical;
+  const correspondenceMatches = canonicalize(bundle.statement_correspondence ?? null) === canonicalize(STATEMENT_CORRESPONDENCE);
   const recordedVerdict = bundle.comparison?.verdict ?? null;
   const verdictMatches = recordedVerdict !== null && recomputed.verdict === recordedVerdict;
   const signaturesValid = checks.length > 0 && checks.every((check) => check.signature_valid && check.hash_valid);
-  const bundleStatus = !signaturesValid ? "SIGNATURE_INVALID" : verdictMatches ? "VERIFIED" : "COMPARISON_ALTERED";
+  const bundleStatus = !signaturesValid ? "SIGNATURE_INVALID"
+    : mismatchedPairing.length > 0 ? "CLAIM_PAIR_MISMATCH"
+      : comparisonMatches && correspondenceMatches ? "VERIFIED" : "COMPARISON_ALTERED";
 
+  const digest = (value) => (value === null ? null : createHash("sha256").update(value).digest("hex"));
   console.log(JSON.stringify({
     checks,
     comparison_source: "recomputed_from_verified_records",
     excluded_unverified_records: excluded,
+    pairing_fields: PAIRING_FIELDS,
+    mismatched_pairing_fields: mismatchedPairing,
+    claim_pair_bound: mismatchedPairing.length === 0,
     recomputed_comparison: recomputed,
+    recomputed_comparison_digest: digest(recomputedCanonical),
+    recorded_comparison_digest: digest(recordedCanonical),
     recorded_verdict: recordedVerdict,
     verdict_matches: verdictMatches,
+    comparison_matches: comparisonMatches,
+    statement_correspondence_matches: correspondenceMatches,
     bundle_status: bundleStatus
   }, null, 2));
   console.log();
   console.log(`VERIFIED: each record's canonical hash matches payload_sha256: ${checks.every((c) => c.hash_valid) ? "YES" : "NO"}`);
   console.log(`VERIFIED: each signature is valid for its published demo key: ${signaturesValid ? "YES" : "NO"}`);
+  console.log(`VERIFIED: both records are evidence about the same claim: ${mismatchedPairing.length === 0 ? "YES" : `NO (${mismatchedPairing.join(", ")})`}`);
   console.log(`VERIFIED: recomputed comparison verdict matches the bundle: ${verdictMatches ? "YES" : "NO"}`);
+  console.log(`VERIFIED: the whole recorded comparison is reproducible: ${comparisonMatches ? "YES" : "NO"}`);
+  console.log(`VERIFIED: the published correspondence table is the one applied: ${correspondenceMatches ? "YES" : "NO"}`);
   console.log(`BUNDLE STATUS: ${bundleStatus}`);
   console.log("NOT VERIFIED: that any real-world event occurred");
   console.log("NOT VERIFIED: that the demo sources are organizationally independent");
   console.log("NOT VERIFIED: wall-clock accuracy or real-world identity");
-  process.exit(signaturesValid && verdictMatches ? 0 : 2);
+  process.exit(bundleStatus === "VERIFIED" ? 0 : 2);
 }
 
 main();

@@ -16,8 +16,10 @@ Current public build includes:
 - bounded comparison results: `AGREEMENT`, `DISAGREEMENT`, `INSUFFICIENT_EVIDENCE`
 - source-scoped SHA-256 commitments and Ed25519 demo signatures
 - published demo public keys; signing secret held only in the function environment
-- verification that recomputes the comparison from verified records and reports `verdict_matches`
-- an offline verifier with a clean fixture, a record-tamper fixture, and a verdict-tamper fixture
+- a pairing gate over signed fields (`claim_id`, `request_id`, `scenario`), so validly signed records from different claims cannot be spliced into a verified pair
+- verification that recomputes the whole comparison from verified records — verdict, every diff row, `reason`, `missing`, and the published correspondence table — and reports `comparison_matches` alongside a content-derived comparison digest
+- one bounded bundle status: `VERIFIED`, `SIGNATURE_INVALID`, `CLAIM_PAIR_MISMATCH`, or `COMPARISON_ALTERED`
+- an offline verifier with a clean fixture, a record-tamper fixture, and a verdict-tamper fixture, held to the same conclusions as the browser by a cross-verifier equivalence suite
 - one evidence board shared by the human and the agent
 - explicit limitations and unsupported-browser behavior
 - automated tests for comparison semantics, fixture reachability, request-override resistance, signature verification, verdict-tamper detection, the WebMCP surface, the offline verifier, publication safety, and live production signed records

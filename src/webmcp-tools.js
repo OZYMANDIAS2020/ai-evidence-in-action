@@ -257,7 +257,11 @@ export function createStore(onChange, log) {
         state.destination = null;
         state.destinationUnavailable = true;
         state.destinationUnavailableReason = error.code || "DEMO_SERVICE_ERROR";
-        state.comparison = { verdict: "INSUFFICIENT_EVIDENCE", missing: ["destination"], diff: [], reason: "DESTINATION_UNAVAILABLE" };
+        // Only what a verifier can recompute from the bundle goes in the
+        // comparison. Why the destination is missing is live session state, not
+        // something a later reader could reproduce, so it is reported beside the
+        // comparison rather than inside it.
+        state.comparison = compareRecords(state.site, null);
         state.verification = null;
         emit();
         log("RETURNED", "get_evidence", "DESTINATION_UNAVAILABLE");
@@ -277,13 +281,15 @@ export function createStore(onChange, log) {
       log("CALLED", "compare_evidence", input?.claim_id || "missing claim");
       if (!state.site || input?.claim_id !== state.site.claim_id) return fail("CLAIM_NOT_FOUND", "No matching demo claim exists.");
       state.comparison = compareRecords(state.site, state.destination);
-      if (state.destinationUnavailable && !state.destination) state.comparison.reason = "DESTINATION_UNAVAILABLE";
       emit();
       log("RETURNED", "compare_evidence", state.comparison.verdict);
       return {
         ok: true,
         schema: SCHEMA,
         ...state.comparison,
+        // Beside the comparison, never inside it: the comparison must stay
+        // exactly what a verifier can recompute from the bundle alone.
+        destination_unavailable: Boolean(state.destinationUnavailable && !state.destination),
         established: ["The deterministic relationship between the currently held demo records."],
         not_established: ["Which source is correct, why they differ, or whether a real-world financial event occurred."]
       };
