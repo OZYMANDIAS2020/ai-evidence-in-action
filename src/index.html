@@ -8,80 +8,19 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <strong>AI Evidence in Action</strong>
-      <span class="tag">WebMCP Challenge</span>
-    </div>
-    <div id="agent-status" class="status">Agent surface: checking…</div>
-  </header>
-
+  <header class="topbar"><div><strong>AI Evidence in Action</strong><span class="tag">WebMCP Challenge</span></div><div id="agent-status" class="status">Agent surface: checking…</div></header>
   <main>
-    <section class="hero">
-      <p class="eyebrow">Synthetic refund demonstration</p>
-      <h1>The site said it worked. Who else agrees?</h1>
-      <p>An AI agent can act through this page with WebMCP. The page records the site's claim, checks a second simulated source, compares the evidence, and shows only what can actually be established.</p>
-      <div class="actions">
-        <button id="run-demo">Run scripted agent</button>
-        <button id="reset-demo" class="secondary">Reset demo</button>
-      </div>
-      <p id="unsupported" class="notice" hidden>This browser does not currently expose <code>document.modelContext</code>. The manual demo still works; WebMCP registration will activate automatically in a supported browser.</p>
-    </section>
-
+    <section class="hero"><p class="eyebrow">Synthetic refund demonstration</p><h1>The site said it worked. Who else agrees?</h1><p>An AI agent can act through this page with WebMCP. The page records the site's claim, checks a second simulated source, compares the evidence, verifies the signed records, and shows only what can actually be established.</p><div class="actions"><button id="run-demo">Run scripted agent</button><button id="reset-demo" class="secondary">Reset demo</button></div><p id="unsupported" class="notice" hidden>This browser does not currently expose <code>document.modelContext</code>. The same synthetic demonstration remains usable with the page button; WebMCP registration activates automatically in a supported browser.</p></section>
     <section class="board" aria-label="Evidence board">
-      <article class="card">
-        <div class="card-head"><span>WEB APPLICATION ACCOUNT</span><span class="demo-chip">DEMO DATA</span></div>
-        <h2>Order ORD-1042 · $64.00</h2>
-        <p id="site-status" class="state">NO CLAIM</p>
-        <p id="site-detail">No refund claim has been recorded yet.</p>
-      </article>
-
-      <article class="card">
-        <div class="card-head"><span>DESTINATION / SYSTEM ACCOUNT</span><span class="demo-chip">DEMO DATA</span></div>
-        <h2>Simulated destination</h2>
-        <p id="destination-status" class="state">NOT CHECKED</p>
-        <p id="destination-detail">No destination evidence has been fetched yet.</p>
-      </article>
-
-      <article class="card comparison-card">
-        <div class="card-head"><span>COMPARISON</span></div>
-        <h2 id="verdict">INSUFFICIENT EVIDENCE</h2>
-        <p id="verdict-detail">A second source has not been checked yet.</p>
-        <div id="diff" class="diff"></div>
-      </article>
+      <article class="card"><div class="card-head"><span>WEB APPLICATION ACCOUNT</span><span class="demo-chip">DEMO DATA</span></div><h2>Order ORD-1042 · $64.00</h2><p id="site-status" class="state">NO CLAIM</p><p id="site-detail">No refund claim has been recorded yet.</p><p id="site-integrity" class="signature">No signed record yet</p></article>
+      <article class="card"><div class="card-head"><span>DESTINATION / SYSTEM ACCOUNT</span><span class="demo-chip">DEMO DATA</span></div><h2>Simulated destination</h2><p id="destination-status" class="state">NOT CHECKED</p><p id="destination-detail">No destination evidence has been fetched yet.</p><p id="destination-integrity" class="signature">No signed record yet</p></article>
+      <article class="card comparison-card"><div class="card-head"><span>COMPARISON</span></div><h2 id="verdict">INSUFFICIENT EVIDENCE</h2><p id="verdict-detail">A second source has not been checked yet.</p><div id="diff" class="diff"></div></article>
     </section>
-
-    <section class="panel">
-      <h2>Tool-call timeline</h2>
-      <ol id="timeline" class="timeline"></ol>
-    </section>
-
-    <section class="split">
-      <article class="panel">
-        <h2>What can be established</h2>
-        <ul id="established"><li>No claim has been recorded yet.</li></ul>
-      </article>
-      <article class="panel">
-        <h2>What cannot be established</h2>
-        <ul id="not-established"><li>Whether any real-world financial event occurred.</li></ul>
-      </article>
-    </section>
-
-    <section class="panel">
-      <h2>Verify it yourself</h2>
-      <p>Verification in this challenge build checks the integrity of the public demonstration evidence. It does not prove a real-world refund occurred.</p>
-      <div class="actions">
-        <button id="copy-bundle" class="secondary">Copy evidence bundle</button>
-        <button id="verify-bundle" class="secondary">Verify evidence</button>
-      </div>
-      <pre id="bundle-output" class="code"></pre>
-    </section>
+    <section class="panel"><h2>Tool-call timeline</h2><ol id="timeline" class="timeline"></ol></section>
+    <section class="split"><article class="panel"><h2>What can be established</h2><ul id="established"><li>No claim has been recorded yet.</li></ul></article><article class="panel"><h2>What cannot be established</h2><ul id="not-established"><li>Whether any real-world financial event occurred.</li></ul></article></section>
+    <section class="panel"><h2>Verify it yourself</h2><p>Verification recomputes the SHA-256 commitment and checks each Ed25519 signature against the published demo public keys. It verifies demo-record integrity and key attribution only—not that a real-world refund occurred.</p><p class="verification-line">Current verification: <strong id="verification-status">NOT VERIFIED YET</strong></p><div class="actions"><button id="copy-bundle" class="secondary">Copy evidence bundle</button><button id="download-bundle" class="secondary">Download evidence bundle</button><button id="verify-bundle" class="secondary">Verify signatures</button><a class="button-link secondary" href="/downloads/verify.mjs" download>Download offline verifier</a></div><p class="small">Offline use: <code>node verify.mjs ai-evidence-in-action-bundle.json</code>. The verifier uses the public demo keys embedded in the script and does not contact this site.</p><pre id="bundle-output" class="code"></pre></section>
   </main>
-
-  <footer>
-    The destination source is simulated and runs as part of this demonstration. It represents the role of a second evidence source; it is not presented as an independent financial institution.
-  </footer>
-
+  <footer>The destination source is simulated and runs in this same demonstration deployment. It uses a distinct demo signing key but is not presented as an independent financial institution or organizationally independent source.</footer>
   <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -9,11 +9,15 @@ The public implementation is being built during the WebMCP Challenge submission 
 Current public build includes:
 
 - four imperative WebMCP tool definitions on `document.modelContext`
-- synthetic refund claim flow
-- simulated second-source evidence
+- fixed synthetic refund claim flow for `ORD-1042` / $64.00
+- simulated comparison-source evidence
 - bounded comparison results: `AGREEMENT`, `DISAGREEMENT`, `INSUFFICIENT_EVIDENCE`
+- source-scoped SHA-256 commitments and Ed25519 demo signatures
+- published demo public keys
+- an offline verifier with a clean signed fixture and a deliberate one-field tamper fixture
 - a shared human/agent evidence board
 - explicit limitations and unsupported-browser behavior
+- automated tests for the comparison semantics, WebMCP surface, and offline verifier
 
 ## Publication boundary
 
@@ -21,4 +25,4 @@ This repository is intentionally standalone. It contains no private production s
 
 ## Status
 
-Build in progress. Cryptographic signing, offline verification, production deployment testing, and final challenge validation are not yet claimed complete until the corresponding public artifacts and tests are present in this repository.
+Build in progress. The signed demonstration evidence and offline verifier are implemented and locally falsified against the tampered fixture. Production WebMCP browser testing, full P0 attack validation, final video, and final challenge submission remain to be completed and will not be claimed complete until measured.

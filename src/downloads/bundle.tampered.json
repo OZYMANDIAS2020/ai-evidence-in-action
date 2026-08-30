@@ -1,0 +1,36 @@
+{
+  "schema": "ai-evidence-in-action/demo-bundle/1",
+  "created_at": "2026-08-30T03:55:02.000Z",
+  "records": [
+    {
+      "schema": "ai-evidence-in-action/demo-evidence/1",
+      "record_id": "rec_example_site",
+      "record_type": "site_claim",
+      "claim_id": "clm_example_1042",
+      "request_id": "example-request-1042",
+      "source": { "id": "site-demo", "origin": "https://ai-evidence-in-action.netlify.app" },
+      "statement": "SUCCESS_DECLARED",
+      "subject": { "order_id": "ORD-1042", "amount_cents": 6400, "currency": "USD" },
+      "observed_at": "2026-08-30T03:55:00.000Z",
+      "integrity": { "status": "SIGNED", "algorithm": "Ed25519", "digest": "SHA-256", "payload_sha256": "443389f1fd8949e2657ab95ec454cae473bf2a79cf84941de612f983c100887e", "sig_ed25519": "RO00NdLwEzv3MMnUeBimyElGVCi08x6mdgP1fJ6By3oae9AlcIyurIXmcHwcxLEG4mzVZ3ZCsPQZBppPNSLOCg==", "key_id": "site-demo-2026" }
+    },
+    {
+      "schema": "ai-evidence-in-action/demo-evidence/1",
+      "record_id": "rec_example_destination",
+      "record_type": "destination_report",
+      "claim_id": "clm_example_1042",
+      "request_id": "example-request-1042",
+      "source": { "id": "destination-demo", "origin": "https://ai-evidence-in-action.netlify.app" },
+      "statement": "ACTION_ABSENT",
+      "subject": { "order_id": "ORD-1042", "amount_cents": 640, "currency": "USD" },
+      "observed_at": "2026-08-30T03:55:01.000Z",
+      "integrity": { "status": "SIGNED", "algorithm": "Ed25519", "digest": "SHA-256", "payload_sha256": "0b01b0bfe1d0b29dabf9859fb336865ee7c868988e87f820e99d17aeaada5fa7", "sig_ed25519": "jkVQGpXgf55QJXcwN5OHWrzEJCGzjbGIItwwVSKJRmBwrbtwVdUOwFLz6YPcbXpM3kaWVOI80FBmMc0kN604Dg==", "key_id": "destination-demo-2026" }
+    }
+  ],
+  "comparison": { "verdict": "DISAGREEMENT", "diff": [
+    { "field": "order_id", "site_value": "ORD-1042", "destination_value": "ORD-1042", "match": true },
+    { "field": "amount_cents", "site_value": 6400, "destination_value": 6400, "match": true },
+    { "field": "currency", "site_value": "USD", "destination_value": "USD", "match": true }
+  ] },
+  "limitations": ["Synthetic demonstration data only.", "The destination source is simulated in the same demo deployment.", "Valid signatures establish demo-record integrity and attribution to the published demo keys only.", "The demo does not prove any real-world financial event occurred.", "The demo does not establish that the two sources are organizationally independent."]
+}

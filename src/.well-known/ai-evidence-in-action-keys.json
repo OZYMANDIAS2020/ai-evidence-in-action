@@ -1,0 +1,14 @@
+{
+  "schema": "ai-evidence-in-action/demo-keys/1",
+  "keys": {
+    "site-demo-2026": {
+      "algorithm": "Ed25519",
+      "spki_base64": "MCowBQYDK2VwAyEATq/vzvMcOiKJDoHWTf+crCgpfmJJK3xkqNiJj47/YCQ="
+    },
+    "destination-demo-2026": {
+      "algorithm": "Ed25519",
+      "spki_base64": "MCowBQYDK2VwAyEAUG8cNiPTPddXq6gOOfCcQQ8dZjRbniLZmtDVU+5BNyY="
+    }
+  },
+  "note": "Distinct demo keypairs are derived inside the same demonstration service from one deployment secret. They demonstrate source-scoped integrity signatures; they do not establish organizational independence."
+}
