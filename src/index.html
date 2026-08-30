@@ -15,6 +15,19 @@
       <p class="eyebrow">Synthetic refund demonstration</p>
       <h1>The site said it worked. Who else agrees?</h1>
       <p>An AI agent can act through this page with WebMCP. The page records the site's claim, checks a second simulated source, compares the evidence, verifies the signed records, and shows only what can actually be established. The human and the agent read the same board.</p>
+      <section class="howto" aria-label="How to use this demo">
+        <h2>How to use</h2>
+        <ol>
+          <li>Choose a scenario.</li>
+          <li>Run the demo agent.</li>
+          <li>Compare what the two sources reported.</li>
+          <li>Verify the evidence or test tamper detection.</li>
+        </ol>
+        <div class="howto-notes">
+          <p class="howto-note">Everything appears on the board below. Reset demo starts over.</p>
+          <p class="howto-note">WebMCP agents can call <code>request_refund</code> → <code>get_evidence</code> → <code>compare_evidence</code> → <code>verify_evidence</code> directly; the same board updates for the human.</p>
+        </div>
+      </section>
       <fieldset class="scenarios">
         <legend>Synthetic fixture</legend>
         <label><input type="radio" name="scenario" value="disagreement" checked /><span><strong>Disagreement</strong><em>The destination reports no matching action.</em></span></label>
@@ -22,18 +35,19 @@
         <label><input type="radio" name="scenario" value="insufficient_evidence" /><span><strong>Insufficient evidence</strong><em>The destination returns no evidence at all.</em></span></label>
       </fieldset>
       <p class="small">The selected fixture is a named server-side scenario. It chooses which synthetic situation the demo replays; it cannot set what any record says. Every statement is decided and signed on the server.</p>
-      <div class="actions"><button id="run-demo">Run scripted agent</button><button id="reset-demo" class="secondary">Reset demo</button></div>
+      <div class="actions"><button id="run-demo">Run demo agent</button><button id="reset-demo" class="secondary">Reset demo</button></div>
       <p class="small">This button walks the same four WebMCP tools an AI agent would call: <code>request_refund</code>, <code>get_evidence</code>, <code>compare_evidence</code>, <code>verify_evidence</code>. In a browser that supports WebMCP an agent drives them directly, and the board below updates as it goes.</p>
       <p id="unsupported" class="notice" hidden>This browser does not currently expose <code>document.modelContext</code>. The same synthetic demonstration remains usable with the page button; WebMCP registration activates automatically in a supported browser.</p>
     </section>
     <section class="board" aria-label="Evidence board">
       <article class="card"><div class="card-head"><span>DEMO SITE CLAIM</span><span class="demo-chip">DEMO DATA</span></div><p class="operator-note">Same demonstration operator</p><h2>Order ORD-1042 · $64.00</h2><p id="site-status" class="state">NO CLAIM</p><p id="site-detail">No refund claim has been recorded yet.</p><p id="site-integrity" class="signature">No signed record yet</p></article>
       <article class="card"><div class="card-head"><span>DEMO DESTINATION CLAIM</span><span class="demo-chip">DEMO DATA</span></div><p class="operator-note">Same demonstration operator</p><h2>Simulated destination</h2><p id="destination-status" class="state">NOT CHECKED</p><p id="destination-detail">No destination evidence has been fetched yet.</p><p id="destination-integrity" class="signature">No signed record yet</p></article>
-      <article class="card comparison-card"><div class="card-head"><span>COMPARISON</span></div><h2 id="verdict">INSUFFICIENT EVIDENCE</h2><p id="verdict-detail">A second source has not been checked yet.</p><div id="diff-head" class="diff-head" hidden><span>FIELD</span><span>SITE</span><span>DESTINATION</span><span>MATCH</span></div><div id="diff" class="diff"></div></article>
+      <article class="card comparison-card"><div class="card-head"><span>COMPARISON</span></div><h2 id="verdict">INSUFFICIENT EVIDENCE</h2><p id="verdict-detail">A second source has not been checked yet.</p><div id="diff-head" class="diff-head" hidden><span>FIELD</span><span>SITE</span><span>DESTINATION</span><span>MATCH</span></div><div id="diff" class="diff"></div><p class="small">AGREEMENT and DISAGREEMENT describe what the two demo sources reported. They are not a verification result: VERIFIED, in the panel below, is about the evidence checks.</p></article>
     </section>
-    <section class="panel"><h2>Tool-call timeline</h2><ol id="timeline" class="timeline"></ol></section>
+    <section class="panel"><h2>Tool-call timeline</h2><ol id="timeline" class="timeline"><li class="timeline-empty">No steps yet. Run the demo agent to see the WebMCP tool calls.</li></ol></section>
     <section class="split"><article class="panel"><h2>What can be established</h2><ul id="established"><li>No claim has been recorded yet.</li></ul></article><article class="panel"><h2>What cannot be established</h2><ul id="not-established"><li>Whether any real-world financial event occurred.</li></ul></article></section>
-    <section class="panel"><h2>Verify it yourself</h2><p>Verification recomputes the SHA-256 commitment, checks each Ed25519 signature against the published demo public keys, then recomputes the comparison from the records that verified and checks it against the verdict recorded in the bundle. Editing the verdict alone is detected even though every signature still passes. It verifies demo-record integrity, key attribution, and comparison consistency only—not that a real-world refund occurred.</p><p class="verification-line">Current verification: <strong id="verification-status">NOT VERIFIED YET</strong></p><div class="actions"><button id="copy-bundle" class="secondary">Copy evidence bundle</button><button id="download-bundle" class="secondary">Download evidence bundle</button><button id="verify-bundle" class="secondary">Verify signatures</button><button id="tamper-demo" class="secondary">Test tamper detection</button><a class="button-link secondary" href="/downloads/verify.mjs" download>Download offline verifier</a></div>
+    <section class="panel"><h2>Verify it yourself</h2><p>Verification recomputes the SHA-256 commitment, checks each Ed25519 signature against the published demo public keys, then recomputes the comparison from the records that verified and checks it against the verdict recorded in the bundle. Editing the verdict alone is detected even though every signature still passes. It verifies demo-record integrity, key attribution, and comparison consistency only—not that a real-world refund occurred.</p><p class="verification-line">Current verification: <strong id="verification-status">NOT VERIFIED YET</strong></p>
+      <p class="small">VERIFIED describes whether the evidence passed the integrity, pairing, and comparison checks. It does not mean a real refund happened, and it is separate from the AGREEMENT or DISAGREEMENT shown above.</p><div class="actions"><button id="copy-bundle" class="secondary">Copy evidence bundle</button><button id="download-bundle" class="secondary">Download evidence bundle</button><button id="verify-bundle" class="secondary">Verify signatures</button><button id="tamper-demo" class="secondary">Test tamper detection</button><a class="button-link secondary" href="/downloads/verify.mjs" download>Download offline verifier</a></div>
       <p class="small">Test tamper detection edits a throwaway copy of the current evidence, changing one value in the recorded comparison and nothing inside the signed records, then runs that copy through the same verifier this page uses. Your own evidence is left untouched.</p><p class="small">Offline use: <code>node verify.mjs ai-evidence-in-action-bundle.json</code>. The verifier uses the public demo keys embedded in the script and does not contact this site.</p><pre id="bundle-output" class="code"></pre></section>
   </main>
   <footer>Both demo sources are simulated in this same deployment and are operated by the same demonstration operator. They use distinct demo signing keys, but they are not organizationally independent and neither is presented as a real financial institution.</footer>
