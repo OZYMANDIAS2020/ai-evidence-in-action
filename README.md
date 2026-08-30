@@ -6,26 +6,38 @@ AI Evidence in Action is a WebMCP Challenge project showing a simple evidence pa
 
 ## Live demo
 
-Planned challenge URL: https://ai-evidence-in-action.netlify.app/
-
-The public deployment is being connected and tested. Until the live build is verified, this repository is the source of truth for implementation progress.
+https://ai-evidence-in-action.netlify.app/
 
 ## Current WebMCP tools
 
 | Tool | Purpose |
 | --- | --- |
-| `request_refund` | Creates a synthetic refund claim in demo state. Performs no real financial action. |
+| `request_refund` | Creates a fixed synthetic $64 refund claim for demo order `ORD-1042`. Performs no real financial action. |
 | `get_evidence` | Reads evidence from the site or simulated destination source. |
 | `compare_evidence` | Returns `AGREEMENT`, `DISAGREEMENT`, or `INSUFFICIENT_EVIDENCE` with field-level differences. |
-| `verify_evidence` | Reports the integrity state of the current demo bundle. Cryptographic signing is not yet claimed in the initial build. |
+| `verify_evidence` | Recomputes SHA-256 commitments and checks Ed25519 signatures against published demo public keys. |
 
-The implementation uses the current imperative WebMCP surface: `document.modelContext.registerTool(...)`, with `AbortSignal` registration lifecycles and only the currently specified annotations.
+The implementation uses the imperative WebMCP surface on `document.modelContext`, with `AbortSignal` registration lifecycles and the currently specified read-only/untrusted-content annotations.
 
 ## Demo scenario
 
-The challenge uses synthetic order `ORD-1042` for **$64.00**. The site declares the synthetic refund successful. The simulated destination then reports no matching action. The comparison therefore returns `DISAGREEMENT`.
+The challenge uses synthetic order `ORD-1042` for **$64.00**. The site declares the synthetic refund successful. The simulated destination then reports no matching action. The comparison returns `DISAGREEMENT`.
 
-All data is synthetic. The destination source is simulated and is part of this demonstration environment; it is not presented as an independent financial institution.
+All data is synthetic. Both sources are part of the same demonstration deployment. They use distinct demo signing keys, but the project does not present them as organizationally independent.
+
+## Verify offline
+
+1. Run the live demo and download the evidence bundle, or use `src/downloads/bundle.example.json`.
+2. Download `src/downloads/verify.mjs`.
+3. Run:
+
+```bash
+node verify.mjs ai-evidence-in-action-bundle.json
+```
+
+A deliberately modified example is included as `src/downloads/bundle.tampered.json`; the verifier must reject it.
+
+The offline verifier establishes only demo-record integrity, signature validity against the published demo keys, and deterministic comparison consistency. It does **not** establish that a real-world financial event occurred, real-world identity, trusted time, or source independence.
 
 ## What this build does not claim
 
@@ -37,7 +49,7 @@ All data is synthetic. The destination source is simulated and is part of this d
 
 ## Run locally
 
-Serve the `src/` directory from a local HTTP server. WebMCP itself requires a supported secure browser context; the manual scripted demo remains usable without WebMCP.
+Serve the `src/` directory from a local HTTP server. WebMCP itself requires a supported secure browser context; the page demo remains usable without WebMCP.
 
 ## Challenge status
 
