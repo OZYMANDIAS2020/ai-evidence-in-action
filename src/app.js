@@ -70,20 +70,24 @@ const store = createStore(render, log); render(store.state); renderTimeline();
  * The only adaptation between this page and the browser's WebMCP runtime, and
  * the only place that knows how this runtime moves values across the boundary.
  *
- * Measured against Chrome 152.0.7977.64 (document.modelContext, flag
- * enable-webmcp-testing), not read off the specification:
- *   - executeTool takes the RegisteredTool from getTools plus its arguments as
- *     a JSON string; passing a plain object fails with "Failed to parse input
- *     arguments".
- *   - results come back as a JSON string.
- * Both are normalised here so nothing downstream has to know either fact.
+ * Current runtimes take the RegisteredTool from getTools plus an input object.
+ * Chrome 152's experimental implementation instead required a JSON string, so
+ * retry that representation only when the object is rejected before execution.
+ * Results may also come back as JSON strings. Both differences are normalised
+ * here so nothing downstream has to know either fact.
  */
 async function executeRegisteredTool(name, input) {
   if (!document.modelContext?.getTools || !document.modelContext?.executeTool) return null;
   const tools = await document.modelContext.getTools();
   const tool = tools.find((candidate) => candidate.name === name);
   if (!tool) throw new Error(`Registered tool ${name} was not discovered.`);
-  const raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
+  let raw;
+  try {
+    raw = await document.modelContext.executeTool(tool, input);
+  } catch (error) {
+    if (!/Failed to parse input arguments/i.test(error?.message || "")) throw error;
+    raw = await document.modelContext.executeTool(tool, JSON.stringify(input));
+  }
   if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return { ok: false, error: { code: "TOOL_RESULT_UNPARSEABLE", message: raw } }; } }
   return raw;
 }

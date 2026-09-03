@@ -80,8 +80,10 @@ test("no tool destructures a second execute argument the runtime does not pass",
   assert.match(source, /execute: async \(input, options\) => store\.requestRefund\(input, options\?\.signal\)/);
 });
 
-test("tool arguments cross the boundary as a JSON string", () => {
-  // Chrome 152 rejects a plain object with "Failed to parse input arguments".
+test("tool arguments cross the boundary as an object with a legacy Chrome fallback", () => {
+  // Current runtimes require an object. Chrome 152's experimental runtime
+  // rejected that representation before execution, so retain a narrow fallback.
+  assert.match(app, /executeTool\(tool, input\)/);
   assert.match(app, /executeTool\(tool, JSON\.stringify\(input\)\)/);
-  assert.equal(/executeTool\(tool, input\)/.test(app), false, "arguments are passed unserialised");
+  assert.match(app, /Failed to parse input arguments/);
 });
